@@ -13,5 +13,5 @@
 ## Instruções básicas:
     * Sempre que desejar desenhar um novo tringulo na tela, é necessario clicar no botão "Novo Triângulo"
     * Para adicionar os pontos do triangulo, clique com o botão esquerdo do mouse na posição desejada
-    * Todas as funcionalidades do código são chamadas atraves do botões no topo da tela
+    * Todas as funcionalidades do código são chamadas atraves dos botões no topo da tela
     * Alguns desses botões so ficam disponiveis ao selecionar um triangulo na lista
