@@ -4,11 +4,11 @@
     * Tkinter (8.6)
         sudo apt-get install python3-tk
     * Sistema Operacional
-        Windows 10
+        Ubuntu 22.04
         
 ## PARA EXECUTAR:
     * Apenas necessário usar a seguinte linha no terminal, na pasta do código:
-        python -u main.py
+        python3 main.py
     
 ## Instruções básicas:
     * Sempre que desejar desenhar um novo tringulo na tela, é necessario clicar no botão "Novo Triângulo"
