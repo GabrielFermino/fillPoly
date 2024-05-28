@@ -3,7 +3,7 @@ from tkinter import colorchooser
 from point import Point
 from triangle import Triangle
 
-class Application():
+class Application:
     def __init__(self, root):
         self.root = root
         self.root.title("Trabalho 1 - Computação Gráfica")
@@ -150,6 +150,9 @@ class Application():
         self.botao_editar.config(state=tk.DISABLED)
         self.botao_novo.config(state=tk.DISABLED)
         self.botao_remover.config(state=tk.DISABLED)
+        self.botao_preencher.config(state=tk.DISABLED)
+        self.botao_pintar.config(state=tk.DISABLED)
+        self.botao_pintar_pontos.config(state=tk.DISABLED)
 
     def startDragging(self, event):
         x, y = event.x, event.y
@@ -172,6 +175,10 @@ class Application():
         self.botao_parar_edicao.config(state=tk.DISABLED)
         self.botao_editar.config(state=tk.NORMAL)
         self.botao_novo.config(state=tk.NORMAL)
+        self.botao_remover.config(state=tk.NORMAL)
+        self.botao_preencher.config(state=tk.NORMAL)
+        self.botao_pintar.config(state=tk.NORMAL)
+        self.botao_pintar_pontos.config(state=tk.NORMAL)
 
     def paintPoints(self):
         if hasattr(self, 'selectedTriangle'):
@@ -184,74 +191,74 @@ class Application():
                 )
 
     def fillPoly(self):
-        vertices = [(point.xy(), point.cor) for point in self.selectedTriangle.points]
-        self.rasterize_triangle(vertices[0][0], vertices[1][0], vertices[2][0], vertices[0][1], vertices[1][1], vertices[2][1])
-        
-    def is_edge_pixel(self, x, y, edges):
-        for edge in edges:
-            (x1, y1), (x2, y2) = edge
-            # Check if (x, y) lies on the line segment from (x1, y1) to (x2, y2)
-            if min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2):
-                if x2 - x1 == 0:  # Vertical line
-                    if x == x1:
-                        return True
-                else:
-                    slope = (y2 - y1) / (x2 - x1)
-                    intercept = y1 - slope * x1
-                    if y == int(slope * x + intercept):
-                        return True
-        return False
-
-    def rasterize_triangle(self, v1, v2, v3, c1, c2, c3):
+        points = self.selectedTriangle.points
+        vertices = [(p.xy(), p.cor) for p in points]
+        self.rasterize_triangle(vertices[0][0], vertices[1][0], vertices[2][0], vertices[0][1], vertices[1][1], vertices[2][1], self.canvas)
+        self.canvas.update()
+    
+    def rasterize_triangle(self, v1, v2, v3, c1, c2, c3, canvas):
         vertices = sorted([(v1, c1), (v2, c2), (v3, c3)], key=lambda v: v[0][1])
-
+        
         v1, c1 = vertices[0]
         v2, c2 = vertices[1]
         v3, c3 = vertices[2]
+        
+        dc12 = [((c2[i] - c1[i]) / (v2[1] - v1[1])) for i in range(3)]
+        dc13 = [((c3[i] - c1[i]) / (v3[1] - v1[1])) for i in range(3)]
+        dc23 = [((c3[i] - c2[i]) / (v3[1] - v2[1])) for i in range(3)]
+        
+        dx12 = ((v2[0] - v1[0]) / (v2[1] - v1[1]))
+        dx13 = ((v3[0] - v1[0]) / (v3[1] - v1[1]))
+        dx23 = ((v3[0] - v2[0]) / (v3[1] - v2[1]))
 
-        edges = [(v1, v2), (v2, v3), (v3, v1)]
+        c12_r, c12_g, c12_b = c1
+        c13_r, c13_g, c13_b = c1
+        c23_r, c23_g, c23_b = c2
 
-        def interpolate(y, y1, y2, v1, v2):
-            if y2 == y1:
-                return v1
-            return v1 + (v2 - v1) * (y - y1) / (y2 - y1)
+        c12_x = v1[0]
+        c13_x = v1[0]
+        c23_x = v2[0]
+        
+        for y in range(v1[1], v3[1]):
+            if y < v2[1]:
+                self.draw_scanline(c12_x, c13_x, [c12_r, c12_g, c12_b], [c13_r, c13_g, c13_b], y, canvas)
+                c12_r += dc12[0]   
+                c12_g += dc12[1]   
+                c12_b += dc12[2]    
+                c12_x += dx12
+                c13_x += dx13
+            else:
+                self.draw_scanline(c23_x, c13_x, [c23_r, c23_g, c23_b], [c13_r, c13_g, c13_b], y, canvas)
+                c23_r += dc23[0]   
+                c23_g += dc23[1]   
+                c23_b += dc23[2]   
+                c23_x += dx23
+                c13_x += dx13
+                
+            c13_r += dc13[0]      
+            c13_g += dc13[1]      
+            c13_b += dc13[2]      
 
-        def interpolate_color(y, y1, y2, c1, c2):
-            if y2 == y1:
-                return c1
-            return [
-                c1[i] + (c2[i] - c1[i]) * (y - y1) / (y2 - y1)
-                for i in range(3)
-            ]
+    def draw_scanline(self, x1, x2, c1, c2, y, canvas):
+        if x1 > x2:
+            x1, x2 = x2, x1  
+            c1, c2 = c2, c1 
 
-        for y in range(v1[1], v3[1] + 1):
-            x_start = interpolate(y, v1[1], v3[1], v1[0], v3[0])
-            x_end = interpolate(y, v1[1], v2[1], v1[0], v2[0]) if y <= v2[1] else interpolate(y, v2[1], v3[1], v2[0], v3[0])
-            c_start = interpolate_color(y, v1[1], v3[1], c1, c3)
-            c_end = interpolate_color(y, v1[1], v2[1], c1, c2) if y <= v2[1] else interpolate_color(y, v2[1], v3[1], c2, c3)
+        dc_r = (c2[0] - c1[0]) / (x2 - x1) if x2 != x1 else 0   
+        dc_g = (c2[1] - c1[1]) / (x2 - x1) if x2 != x1 else 0 
+        dc_b = (c2[2] - c1[2]) / (x2 - x1) if x2 != x1 else 0  
+        
+        c_r, c_g, c_b = c1
 
-            if x_start > x_end:
-                x_start, x_end = x_end, x_start
-                c_start, c_end = c_end, c_start
+        for x in range(int(x1), int(x2)):
+            self.set_pixel_color(x, y, [c_r, c_g, c_b], canvas) 
+            c_r += dc_r   
+            c_g += dc_g   
+            c_b += dc_b    
 
-            self.draw_scanline(int(x_start), c_start, int(x_end), c_end, y, edges)
-
-    def draw_scanline(self, x_start, c_start, x_end, c_end, y, edges):
-        dc = [
-            (c_end[i] - c_start[i]) / (x_end - x_start) if x_end != x_start else 0
-            for i in range(3)
-        ]
-
-        c = c_start[:]
-
-        for x in range(x_start, x_end + 1):
-            if not self.is_edge_pixel(x, y, edges):
-                self.set_pixel_color(x, y, c)
-            c = [c[i] + dc[i] for i in range(3)]
-
-    def set_pixel_color(self, x, y, color):
-        color = Point.rgb_to_hex(tuple(map(int, color)))
-        self.canvas.create_line(x, y, x+1, y, fill=color)
+    def set_pixel_color(self, x, y, color, canvas):
+        color = '#%02x%02x%02x' % (int(color[0]), int(color[1]), int(color[2]))
+        canvas.create_line(x, y, x+1, y, fill=color)
 
     def sair(self):
         self.root.destroy()
